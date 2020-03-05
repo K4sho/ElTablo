@@ -46,5 +46,5 @@ class RegisterUserForm(forms.ModelForm):
 
     class Meta:
         model = AdvUser
-        fields = ('username', 'email', 'password1', 'password2', 'first_name'
+        fields = ('username', 'email', 'password1', 'password2', 'first_name',
                   'last_name', 'send_messages')

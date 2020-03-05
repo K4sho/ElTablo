@@ -25,11 +25,13 @@ SECRET_KEY = '^6g0i@gynq8&227g%9fj0z05e5uvsk!9r44ig!zzzrzbub-_s2'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# python -m smtpd -n -c DebuggingServer localhost:1025
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 1025
+
 ALLOWED_HOSTS = []
 
-
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

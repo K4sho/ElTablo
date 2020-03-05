@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.dispatch import Signal
+from .utilities import send_activation_notification
 
 
 class AdvUser(AbstractUser):
@@ -8,3 +10,15 @@ class AdvUser(AbstractUser):
 
     class Meta(AbstractUser.Meta):
         pass
+
+
+# Объявляем сигнал
+user_registrated = Signal(providing_args=['instance'])
+
+
+def user_registrated_dispatcher(sender, **kwargs):
+    send_activation_notification(kwargs['instance'])
+
+
+# Привязываем к сигналу обработчик
+user_registrated.connect(user_registrated_dispatcher)
