@@ -12,10 +12,12 @@ from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404
 from django.views.generic.base import TemplateView
 from django.core.signing import BadSignature
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 from .utilities import signer
-from .models import AdvUser
-from .forms import ChangeUserInfoForm, RegisterUserForm
+from .models import AdvUser, SubRubric, Bb
+from .forms import ChangeUserInfoForm, RegisterUserForm, SearchForm
 
 
 def index(request):
@@ -119,4 +121,25 @@ class DeleteUserView(LoginRequiredMixin, DeleteView):
 
 
 def by_rubric(request, pk):
-    pass
+    rubric = get_object_or_404(SubRubric, pk=pk)
+    # Извлекаем объявления, относящиеся к этой рубрике и помеченные для вывода
+    bbs = Bb.objects.filter(is_activa=True, rubric=pk)
+    # Фильтруем объявления по введенному пользователем искомому слову
+    if 'keyword' in request.GET:
+        keyword = request.GET['keyword']
+        # Фильтрация
+        q = Q(title__icontains=keyword) | Q(content__icontains=keyword)
+        bbs = bbs.filter(q)
+    else:
+        keyword = ''
+    # Конструктору класса формы через initial передаем искомое слово
+    form = SearchForm(initial={'keyword': keyword})
+    # Создаем пагинатор с количеством записей - 2
+    paginator = Paginator(bbs, 2)
+    if 'page' in request.GET:
+        page_num = request.GET['page']
+    else:
+        page_num = 1
+    page = paginator.get_page(page_num)
+    context = {'rubric': rubric, 'page': page, 'bbs': page.object_list, 'form': form}
+    return render(request, 'main/by_rubric.html', context)
