@@ -21,7 +21,10 @@ from .forms import ChangeUserInfoForm, RegisterUserForm, SearchForm
 
 
 def index(request):
-    return render(request, 'main/index.html')
+    # Последние 10 объявлений
+    bbs = Bb.objects.filter(is_active=True)[:10]
+    context = {'bbs': bbs}
+    return render(request, 'main/index.html', context)
 
 
 def other_page(request, page):
@@ -42,7 +45,16 @@ class BBLogoutView(LoginRequiredMixin, LogoutView):
 
 @login_required()
 def profile(request):
-    return render(request, 'main/profile.html')
+    bbs = Bb.objects.filter(author=request.user.pk)
+    context = {'bbs': bbs}
+    return render(request, 'main/profile.html', context)
+
+
+@login_required()
+def profile_bb_detail(request, pk):
+    bbs = Bb.objects.filter(pk=pk)
+    context = {'bbs': bbs}
+    return render(request, 'main/profile_bb_detail.html', context)
 
 
 class ChangeUserInfoView(SuccessMessageMixin, LoginRequiredMixin, UpdateView):
@@ -123,7 +135,7 @@ class DeleteUserView(LoginRequiredMixin, DeleteView):
 def by_rubric(request, pk):
     rubric = get_object_or_404(SubRubric, pk=pk)
     # Извлекаем объявления, относящиеся к этой рубрике и помеченные для вывода
-    bbs = Bb.objects.filter(is_activa=True, rubric=pk)
+    bbs = Bb.objects.filter(is_active=True, rubric=pk)
     # Фильтруем объявления по введенному пользователем искомому слову
     if 'keyword' in request.GET:
         keyword = request.GET['keyword']
@@ -143,3 +155,10 @@ def by_rubric(request, pk):
     page = paginator.get_page(page_num)
     context = {'rubric': rubric, 'page': page, 'bbs': page.object_list, 'form': form}
     return render(request, 'main/by_rubric.html', context)
+
+
+def detail(request, rubric_pk, pk):
+    bb = get_object_or_404(Bb, pk=pk)
+    ais = bb.additionalimage_set.all()
+    context = {'bb': bb, 'ais': ais}
+    return render(request, 'main/detail.html', context)
