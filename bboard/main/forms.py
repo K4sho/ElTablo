@@ -1,11 +1,15 @@
 from django import forms
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
+from django.forms import inlineformset_factory
+from captcha.fields import CaptchaField
 
-from .models import AdvUser, user_registrated, SuperRubric, SubRubric
+from .models import AdvUser, user_registrated, SuperRubric, SubRubric, AdditionalImage, Bb
+from .models import Comment
 
 
 class ChangeUserInfoForm(forms.ModelForm):
+    """Форма для изменения данных пользователя"""
     email = forms.EmailField(required=True, label='Адрес электронной почты')
 
     class Meta:
@@ -14,6 +18,7 @@ class ChangeUserInfoForm(forms.ModelForm):
 
 
 class RegisterUserForm(forms.ModelForm):
+    """Форма для регистрации"""
     email = forms.EmailField(required=True, label='Адрес электронной почты')
     password1 = forms.CharField(label='Пароль', widget=forms.PasswordInput,
                                 help_text=password_validation.password_validators_help_text_html())
@@ -51,6 +56,7 @@ class RegisterUserForm(forms.ModelForm):
 
 
 class SubRubricForm(forms.ModelForm):
+    """Форма подрубрик"""
     super_rubric = forms.ModelChoiceField(queryset=SuperRubric.objects.all(), empty_label=None,
                                           label='Надрубрика', required=True)
 
@@ -60,4 +66,33 @@ class SubRubricForm(forms.ModelForm):
 
 
 class SearchForm(forms.Form):
+    """Форма для поиска"""
     keyword = forms.CharField(required=False, max_length=20, label='')
+
+
+class BbForm(forms.ModelForm):
+    """Форма для ввода объявления"""
+    class Meta:
+        model = Bb
+        fields = '__all__'
+        widgets = {'author': forms.HiddenInput}
+
+
+# Набор форм, в которые будут заноситься дополнительные иллюстрации
+AIFormSet = inlineformset_factory(Bb, AdditionalImage, fields='__all__')
+
+
+class UserCommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        exclude = ('is_active',)
+        widgets = {'bb': forms.HiddenInput}
+
+
+class GuestCommentForm(forms.ModelForm):
+    captcha = CaptchaField(label='Введите текст с картинки', error_messages={'invalid': 'Неправильный текст'})
+
+    class Meta:
+        model = Comment
+        exclude = ('is_active',)
+        widgtes = {'bb': forms.HiddenInput}

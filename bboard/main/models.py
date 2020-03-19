@@ -1,10 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.dispatch import Signal
-from .utilities import send_activation_notification, get_timestamp_path
+from .utilities import send_activation_notification, get_timestamp_path, send_new_comment_notification
+from django.db.models.signals import post_save
 
 
 class AdvUser(AbstractUser):
+    """Модель расширенного пользователя"""
     is_activated = models.BooleanField(default=True, db_index=True, verbose_name='Прошел активацию?')
     send_messages = models.BooleanField(default=True, verbose_name='Слать оповещения о новых комментариях?')
 
@@ -67,6 +69,7 @@ class SubRubric(Rubric):
 
 
 class Bb(models.Model):
+    """Модель объявления"""
     rubric = models.ForeignKey(SubRubric, on_delete=models.PROTECT, verbose_name='Рубрика')
     title = models.CharField(max_length=40, verbose_name='Товар')
     content = models.TextField(verbose_name='Описание')
@@ -89,7 +92,22 @@ class Bb(models.Model):
         ordering = ['-created_at']
 
 
+class Comment(models.Model):
+    """Модель комментариев пользователей"""
+    bb = models.ForeignKey(Bb, on_delete=models.CASCADE, verbose_name='Объявление')
+    author = models.CharField(max_length=30, verbose_name='Автор')
+    content = models.TextField(verbose_name='Содержание')
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name='Выводить на экран?')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='Опубликован')
+
+    class Meta:
+        verbose_name_plural = 'Комментарии'
+        verbose_name = 'Комментарий'
+        ordering = ['created_at']
+
+
 class AdditionalImage(models.Model):
+    """Модель иллюстраций"""
     bb = models.ForeignKey(Bb, on_delete=models.CASCADE, verbose_name='Объявление')
     image = models.ImageField(upload_to=get_timestamp_path, verbose_name='Изображение')
 
@@ -108,3 +126,14 @@ def user_registrated_dispatcher(sender, **kwargs):
 
 # Привязываем к сигналу обработчик
 user_registrated.connect(user_registrated_dispatcher)
+
+
+def post_save_dispatcher(sender, **kwargs):
+    author = kwargs['instance'].bb.author
+    # Нужно еще проверить не запретил ли пользователь отправлять уведомления
+    if kwargs['created'] and author.send_messages:
+        send_new_comment_notification(kwargs['instance'])
+
+
+# Привязываем к сигналу обработчик
+post_save.connect(post_save_dispatcher, sender=Comment)
